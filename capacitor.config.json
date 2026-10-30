@@ -1,0 +1,21 @@
+{
+  "appId": "com.youjie.metronome",
+  "appName": "有节动作节拍器",
+  "webDir": "web",
+  "backgroundColor": "#fff4f8",
+  "android": {
+    "backgroundColor": "#fff4f8",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "LIGHT",
+      "insetsHandling": "native",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

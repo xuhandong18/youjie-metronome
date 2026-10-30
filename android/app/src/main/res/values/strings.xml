@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">有节动作节拍器</string>
+    <string name="title_activity_main">有节动作节拍器</string>
+    <string name="package_name">com.youjie.metronome</string>
+    <string name="custom_url_scheme">com.youjie.metronome</string>
+</resources>

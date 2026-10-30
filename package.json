@@ -1,0 +1,19 @@
+{
+  "name": "youjie-metronome",
+  "version": "1.0.0",
+  "private": true,
+  "description": "有节动作节拍器：离线中文播报、动作倒数、换气间隔与安卓原生常亮控制。",
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/prepare-web.mjs && cap sync android",
+    "build:android": "node scripts/build-android.mjs",
+    "test": "node --test tests/metronome.test.cjs tests/screen.test.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}
