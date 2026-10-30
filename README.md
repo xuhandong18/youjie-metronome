@@ -4,7 +4,11 @@
 
 ## 安装使用
 
-安装提供的 `有节动作节拍器-1.0.0.apk`，点击桌面图标打开。这个安装包是签名测试版，可直接安装使用。
+安装提供的 `有节动作节拍器-1.0.1.apk`，点击桌面图标打开。这个安装包是签名测试版，可直接安装使用，也可以覆盖升级旧版。
+
+手机默认完整显示操控页，点右上角“设置”打开独立面板。平板使用左右分栏，只有设置栏内部可以滚动，操控区始终保持在当前屏幕内。圆环会按剩余空间自动缩放；手机横屏和较矮窗口会重新排列控件，极小窗口保留清晰的动作文字与计时。
+
+安卓返回键在设置面板打开时优先关闭面板。旋转屏幕或调整窗口大小不会重置当前训练。
 
 “训练时保持亮屏”默认开启：开始训练和换气期间保持常亮；暂停、重置、完成或离开应用后解除。状态会显示在开关旁边。关掉开关后遵循手机原来的息屏设置。
 
@@ -19,10 +23,14 @@
 1. 执行 `npm ci` 安装锁定的依赖。
 2. 将 `JAVA_HOME` 指向 JDK 21，将 `ANDROID_HOME` 指向 Android SDK。也可在 `android/local.properties` 中配置 `sdk.dir`。
 3. 执行 `npm test` 验证节拍、换气、语音调度与亮屏控制。
-4. 执行 `npm run build:android`。安装包输出到 `dist/有节动作节拍器-1.0.0.apk`。
+4. 执行 `npm run build:android`。安装包按 `package.json` 的版本号输出到 `dist/`，当前为 `有节动作节拍器-1.0.1.apk`。
 
-网页源码在 `web/index.html`；安卓原生亮屏控制在 `android/app/src/main/java/com/youjie/metronome/TrainingScreenPlugin.java`。
+网页与节拍逻辑在 `web/index.html`；屏幕布局在 `web/app.css`、`web/app-layout.js`；安卓原生亮屏与设置面板返回键控制在 `android/app/src/main/java/com/youjie/metronome/`。
 
 `npm run sync` 会将离线网页和 Capacitor 运行库同步到安卓工程。更新页面后重新构建 APK 即可。
 
 正式分发版应配置自己的发布签名，并保留签名密钥，以便后续升级。
+
+## Git 回退
+
+改造前的 1.0.0 源码已提交并标记为 `v1.0.0-before-layout`（提交 `4a0b2ef`）。改版在 `codex/responsive-layout` 分支开发，原版 APK 单独保留。聊天目录另有可独立恢复完整历史的 Git bundle 备份。

@@ -13,6 +13,20 @@ public class TrainingScreenPlugin extends Plugin {
     private boolean foreground = false;
     private boolean training = false;
     private boolean enabled = true;
+    private boolean settingsOpen = false;
+
+    @PluginMethod
+    public void setSettingsOpen(PluginCall call) {
+        final boolean open = Boolean.TRUE.equals(call.getBoolean("open", false));
+        getActivity().runOnUiThread(() -> { settingsOpen = open; call.resolve(); });
+    }
+
+    public boolean closeSettingsIfOpen() {
+        if (!settingsOpen) return false;
+        settingsOpen = false;
+        notifyListeners("closeSettings", new JSObject());
+        return true;
+    }
 
     private void applyScreenState() {
         if (foreground && training && enabled) {

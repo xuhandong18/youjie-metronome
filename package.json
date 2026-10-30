@@ -1,6 +1,6 @@
 {
   "name": "youjie-metronome",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "有节动作节拍器：离线中文播报、动作倒数、换气间隔与安卓原生常亮控制。",
   "type": "module",
