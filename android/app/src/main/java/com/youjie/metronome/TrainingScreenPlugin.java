@@ -7,12 +7,10 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-/** 只控制本应用在前台训练时的亮屏，不更改手机全局设置。 */
+/** 应用在前台时保持亮屏，不更改手机全局设置，也不阻止用户手动锁屏。 */
 @CapacitorPlugin(name = "TrainingScreen")
 public class TrainingScreenPlugin extends Plugin {
     private boolean foreground = false;
-    private boolean training = false;
-    private boolean enabled = true;
     private boolean settingsOpen = false;
 
     @PluginMethod
@@ -29,7 +27,7 @@ public class TrainingScreenPlugin extends Plugin {
     }
 
     private void applyScreenState() {
-        if (foreground && training && enabled) {
+        if (foreground) {
             getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {
             getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -46,18 +44,6 @@ public class TrainingScreenPlugin extends Plugin {
     }
 
     @PluginMethod
-    public void setTrainingState(PluginCall call) {
-        final boolean nextTraining = Boolean.TRUE.equals(call.getBoolean("running", false));
-        final boolean nextEnabled = Boolean.TRUE.equals(call.getBoolean("enabled", true));
-        getActivity().runOnUiThread(() -> {
-            training = foreground && nextTraining;
-            enabled = nextEnabled;
-            applyScreenState();
-            call.resolve(currentState());
-        });
-    }
-
-    @PluginMethod
     public void getState(PluginCall call) {
         getActivity().runOnUiThread(() -> call.resolve(currentState()));
     }
@@ -65,14 +51,13 @@ public class TrainingScreenPlugin extends Plugin {
     @Override
     protected void handleOnResume() {
         foreground = true;
-        // 返回前台后由用户继续训练，不自动恢复计时或保持亮屏。
         applyScreenState();
+        notifyListeners("appResumed", currentState());
     }
 
     @Override
     protected void handleOnPause() {
         foreground = false;
-        training = false;
         applyScreenState();
         notifyListeners("appPaused", new JSObject());
     }
@@ -80,7 +65,6 @@ public class TrainingScreenPlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         foreground = false;
-        training = false;
         applyScreenState();
     }
 }

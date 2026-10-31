@@ -14,7 +14,8 @@
   "plugins": {
     "SystemBars": {
       "style": "LIGHT",
-      "insetsHandling": "native",
+      "insetsHandling": "css",
+      "hidden": false,
       "initialViewportFitValueHint": "cover"
     }
   }

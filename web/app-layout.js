@@ -10,6 +10,7 @@
   const focusButton = document.getElementById('focusButton');
   const wideScreen = matchMedia('(min-width: 900px), (min-width: 760px) and (min-height: 600px)');
   const nativeScreen = window.YoujieNativeScreen;
+  const nativeBars = nativeScreen ? window.capacitorExports.registerPlugin('SystemBars') : null;
   let panelOpen = false;
   let focused = false;
   let frame = 0;
@@ -68,13 +69,17 @@
     focusButton.setAttribute('aria-pressed', String(focused));
     focusButton.querySelector('span').textContent = focused ? '退出专注' : '专注模式';
     setPanel(false, false); scheduleFit();
+    if (nativeBars) {
+      await nativeBars.setStyle({ style: focused ? 'DARK' : 'LIGHT' }).catch(() => {});
+      return;
+    }
     try {
       if (focused && !document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
       else if (!focused && document.fullscreenElement) await document.exitFullscreen();
     } catch (_) { /* 不支持系统全屏时仍使用单屏专注布局。 */ }
   });
   document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && focused) {
+    if (!nativeScreen && !document.fullscreenElement && focused) {
       focused = false; document.body.classList.remove('is-focused');
       focusButton.setAttribute('aria-pressed', 'false'); focusButton.querySelector('span').textContent = '专注模式'; scheduleFit();
     }

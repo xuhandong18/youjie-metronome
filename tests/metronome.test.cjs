@@ -1,37 +1,6 @@
-const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
-const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'web', 'index.html'), 'utf8');
-const attrs = s => Object.fromEntries([...s.matchAll(/([\w-]+)="([^"]*)"/g)].map(m => [m[1], m[2]]));
-class Element {
-  get value() { return this._value; } set value(value) { this._value = String(value); }
-  constructor(a = {}) { Object.assign(this, a); this.value = a.value || ''; this.checked = false; this.style = {}; this.dataset = {}; this.textContent = ''; this.events = {}; this.classList = { toggle() {}, contains() { return false; } }; for (const [key, value] of Object.entries(a)) if (key.startsWith('data-')) this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = value; }
-  addEventListener(kind, fn) { this.events[kind] = fn; } setAttribute(key, value) { this[key] = value; } querySelector() { return this.child ||= new Element(); }
-}
-const elements = new Map([...html.matchAll(/<[^>]+\bid="[^"]+"[^>]*>/g)].map(m => { const a = attrs(m[0]); const el = new Element(a); el.checked = /\bchecked\b/.test(m[0]); return [a.id, el]; }));
-const buttons = [...html.matchAll(/<button\b([^>]*)>/g)].map(m => new Element(attrs(m[1])));
-const document = { hidden: false, events: {}, body: new Element(), getElementById: id => elements.get(id), addEventListener(kind, fn) { this.events[kind] = fn; }, querySelectorAll: selector => buttons.filter(b => selector.startsWith('.') ? b.class?.split(' ').includes(selector.slice(1)) : 'input' in b.dataset) };
-const nodes = [];
-const param = () => ({ setValueAtTime(value) { this.value = value; }, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {}, setTargetAtTime(value) { this.value = value; } });
-const buffer = (length, rate, data = new Float32Array(length)) => ({ length, duration: length / rate, sampleRate: rate, getChannelData: () => data });
-const node = () => { const result = { frequency: param(), playbackRate: param(), connect() {}, disconnect() {}, start(at) { this.at = at; }, stop(at) { this.stopAt = at; this.stops = (this.stops || 0) + 1; } }; nodes.push(result); return result; };
-class FakeAudio {
-  constructor() { this.currentTime = 0; this.sampleRate = 22050; this.state = 'running'; this.destination = {}; this.events = {}; }
-  createGain() { return { gain: param(), connect() {}, disconnect() {} }; }
-  createOscillator() { return node(); } createBufferSource() { return node(); }
-  createBuffer(channels, length, rate) { return buffer(length, rate); }
-  async decodeAudioData(data) { const wav = Buffer.from(data), length = wav.readUInt32LE(40) / 2, rate = wav.readUInt32LE(24), samples = new Float32Array(length); for (let i = 0; i < length; i++) samples[i] = wav.readInt16LE(44 + i * 2) / 32768; return buffer(length, rate, samples); }
-  addEventListener(kind, fn) { this.events[kind] = fn; } async resume() { this.state = 'running'; }
-}
-let saved;
-const sandbox = { document, window: { AudioContext: FakeAudio, addEventListener() {} }, navigator: {}, localStorage: { getItem() { return saved || null; }, setItem(key, value) { saved = value; } }, atob, setInterval: () => 1, clearInterval() {}, console, __sounds: [] };
-vm.createContext(sandbox);
-let source = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-source = source.replace('function sound(kind, at, slot = Infinity, number) {', 'function sound(kind, at, slot = Infinity, number) { globalThis.__sounds.push({kind, at, slot, number});');
-source = source.replace('restoreSettings(); config = readConfig(true);', 'globalThis.test = {state, position, refreshSettings, start, pause, reset, tick, elapsedNow, numberBuffer, updateVolume, restoreSettings, getConfig: () => config, getAudio: () => audio, getMaster: () => master, getVoices: () => voiceBuffers}; restoreSettings(); config = readConfig(true);');
-vm.runInContext(source, sandbox);
-const t = sandbox.test, set = (id, value) => { elements.get(id).value = String(value); };
-function setup(up, down, reps, rest = 0, every = 1, order = 'up-down', prep = false) { t.reset(); set('upSeconds', up); set('downSeconds', down); set('repetitions', reps); set('breathSeconds', rest); set('breathEvery', every); elements.get('prep').checked = prep; buttons.find(b => b.dataset.order === order).events.click(); t.refreshSettings(true); sandbox.__sounds.length = 0; }
-function at(time) { const audio = t.getAudio(); audio.currentTime = t.state.anchor + time; t.tick(); }
-const cues = () => Array.from(t.state.cues, c => [Number(c.time.toFixed(6)), c.kind, c.number]);
+const assert = require('node:assert/strict');
+const {t, setup, at, elements, sandbox, nodes, set, cues} = require('./harness.cjs')();
+const document = sandbox.document;
 (async () => {
   assert.equal(t.getConfig().exercise, 158); assert.equal(t.getConfig().total, 161); assert.equal(elements.get('volume').value, '100');
   setup(1, 4, 2, 0, 1, 'down-up'); await t.start();
@@ -61,11 +30,11 @@ const cues = () => Array.from(t.state.cues, c => [Number(c.time.toFixed(6)), c.k
   assert.ok(nodes.filter(n => n.buffer).every(n => n.playbackRate.value >= 1));
   console.log('通过：小数秒动作与换气、准确计次、结束音只一次、完成后停止。');
   setup(1, 4, 2, 0, 1, 'down-up'); await t.start(); at(1.4); t.pause();
-  const frozen = t.state.elapsed, soundCount = sandbox.__sounds.length; t.getAudio().currentTime += 100; assert.equal(t.elapsedNow(), frozen);
-  await t.start(); assert.equal(sandbox.__sounds.length, soundCount); at(1.81);
-  assert.equal(sandbox.__sounds.at(-1).number, 2); assert.ok(Math.abs(sandbox.__sounds.at(-1).at - (t.state.anchor + 2)) < 1e-7);
+  const frozen = t.state.elapsed; t.getAudio().currentTime += 100; assert.equal(t.elapsedNow(), frozen);
+  await t.start(); assert.equal(t.position(0).kind, 'prep'); assert.equal(t.position(3).kind, 'down');
+  assert.deepEqual(cues().slice(0, 4), [[0,'count',3],[1,'count',2],[2,'count',1],[3,'down',undefined]]);
   t.reset(); assert.equal(t.state.mode, 'idle'); assert.equal(t.state.elapsed, 0);
-  console.log('通过：暂停继续保留倒数相位，不插入额外语音打乱每秒节拍；重置取消后续声音。');
+  console.log('通过：暂停后准备三二一，再重做未完成的一次；重置取消后续声音。');
   setup(1, 1, 3, 2, 2, 'down-up', true); await t.start();
   assert.equal(t.state.cues[0].number, 3); assert.equal(t.state.cues[1].number, 2); assert.equal(t.state.cues[2].number, 1); assert.equal(t.position(3).kind, 'down');
   document.hidden = true; document.events.visibilitychange(); assert.equal(t.state.mode, 'paused'); document.hidden = false;
